@@ -133,7 +133,7 @@ namespace Logistics.Commands
         }
 
         [Command(name: "pull", description: "Pulls specified item from containers.")]
-        public static void PullItem(ChatCommandContext ctx, FoundItem item, int quantity = 1)
+        public static void PullItem(ChatCommandContext ctx, FoundItem item, Quantity quantity)
         {
             PullService.PullItem(ctx.Event.SenderCharacterEntity, item.prefab, quantity);
         }

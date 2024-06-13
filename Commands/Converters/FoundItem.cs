@@ -133,10 +133,6 @@ class FoundItemConverter : CommandArgumentConverter<FoundItem>
             if (name.StartsWith("Item_") && !name.EndsWith("_Base") && !name.EndsWith("_Trader_Template") && !name.EndsWith("_Debug"))
             {
                 var prefabName = prefab.PrefabName();
-                /*if(itemNamesToPrefabs.TryGetValue(prefabName, out var otherPrefab))
-                {
-                    Core.Log.LogWarning($"Duplicate item name found: {prefabName} {prefab} {otherPrefab}");
-                }//*/
                 itemNamesToPrefabs[prefabName] = prefab;
             }
         }

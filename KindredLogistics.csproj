@@ -33,6 +33,6 @@
 	  <NoWarn>NU1605</NoWarn>
   </PropertyGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer\BepInEx\plugins&quot; " />
+    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;C:\Users\Thomas\AppData\Roaming\r2modmanPlus-local\VRising\profiles\Default\BepInEx\plugins\Kindred-KindredLogistics&quot; " />
   </Target>
 </Project>

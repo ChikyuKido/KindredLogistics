@@ -1,4 +1,5 @@
-﻿using ProjectM;
+﻿using KindredLogistics.Commands.Converters;
+using ProjectM;
 using ProjectM.Network;
 using ProjectM.Scripting;
 using ProjectM.Shared;
@@ -6,12 +7,13 @@ using Stunlock.Core;
 using System;
 using Unity.Entities;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 
 namespace KindredLogistics.Services
 {
     internal class PullService
     {
-        public static void PullItem(Entity character, PrefabGUID item, int quantity)
+        public static void PullItem(Entity character, PrefabGUID item, Quantity quantity)
         {
             var user = character.Read<PlayerCharacter>().UserEntity.Read<User>();
             if (Core.PlayerSettings.IsPullEnabled())
@@ -45,7 +47,17 @@ namespace KindredLogistics.Services
 
             var dontPullLast = Core.PlayerSettings.IsDontPullLastEnabled(user.PlatformId);
 
-            var quantityRemaining = quantity;
+            var quantityRemaining = quantity.quantity;
+            var wantedQuantity = quantityRemaining;
+            if(quantityRemaining == -1)
+            {
+                var allStorage = GetAmountOfItemsInStorage(character, item, serverGameManager);
+                ServerChatUtils.SendSystemMessageToClient(Core.EntityManager, user, "All storage:" +allStorage);
+
+                quantityRemaining = quantity.quantityPercent >= allStorage ? 100 : (int)(allStorage / 100.0f * quantity.quantityPercent);
+                ServerChatUtils.SendSystemMessageToClient(Core.EntityManager, user, "Wanted storage:" + quantityRemaining);
+                wantedQuantity = quantityRemaining;
+            }
             var foundStash = false;
             var playerInventorySlot = 0;
             var inventoryFull = false;
@@ -99,13 +111,33 @@ namespace KindredLogistics.Services
             if (!foundStash)
                 ServerChatUtils.SendSystemMessageToClient(Core.EntityManager, user, "Unable to pull as no available stashes found in your current territory!");
             else if (quantityRemaining <= 0)
-                ServerChatUtils.SendSystemMessageToClient(entityManager, user, $"Pulled {quantity}x {item.PrefabName()} from containers.");
+                ServerChatUtils.SendSystemMessageToClient(entityManager, user, $"Pulled {wantedQuantity}x {item.PrefabName()} from containers.");
             else
-                ServerChatUtils.SendSystemMessageToClient(entityManager, user, $"Was able to only pull {quantity - quantityRemaining}x out of desired {quantity}x {item.PrefabName()} from containers.");
+                ServerChatUtils.SendSystemMessageToClient(entityManager, user, $"Was able to only pull {wantedQuantity - quantityRemaining}x out of desired {wantedQuantity}x {item.PrefabName()} from containers.");
 
             if (inventoryFull)
                 ServerChatUtils.SendSystemMessageToClient(entityManager, user, "Inventory is full, unable to pull more items.");
 
+        }
+
+        private static int GetAmountOfItemsInStorage(Entity character, PrefabGUID item, ServerGameManager serverGameManager)
+        {
+            int amount = 0;
+            foreach (var stash in Core.Stash.GetAllAlliedStashesOnTerritory(character))
+            {
+                if (!serverGameManager.TryGetBuffer<AttachedBuffer>(stash, out var buffer))
+                    continue;
+
+                foreach (var attachedBuffer in buffer)
+                {
+                    var attachedEntity = attachedBuffer.Entity;
+                    if (!attachedEntity.Has<PrefabGUID>()) continue;
+                    if (!attachedEntity.Read<PrefabGUID>().Equals(StashService.ExternalInventoryPrefab)) continue;
+
+                    amount += serverGameManager.GetInventoryItemCount(attachedEntity, item);
+                }
+            }
+            return amount;
         }
 
         public static void HandleRecipePull(Entity character, Entity workstation, PrefabGUID recipe)
